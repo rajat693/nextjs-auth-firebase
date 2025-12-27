@@ -47,9 +47,14 @@ export default function Profile() {
   const handleSignOut = async () => {
     setLoggingOut(true);
     try {
+      // 1. Backend logout
+      await fetch('/api/logout', { method: 'POST' });
+      
+      // 2. Firebase signout
       await signOut();
-      // Session is cleared, now redirect
-      router.push('/login');
+      
+      // 3. Redirect
+      router.replace('/login');
     } catch (error) {
       console.error('Error signing out:', error);
       setLoggingOut(false);
@@ -138,7 +143,7 @@ export default function Profile() {
       <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="bg-white rounded-lg shadow overflow-hidden">
           {/* Profile Header */}
-          <div className="bg-gradient-to-r from-blue-600 to-blue-400 px-6 py-12">
+          <div className="bg-linear-to-r from-blue-600 to-blue-400 px-6 py-12">
             <div className="flex items-center gap-6">
               {user?.photoURL && (
                 <div className="relative w-24 h-24 rounded-full border-4 border-white shadow-lg overflow-hidden">

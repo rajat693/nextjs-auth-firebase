@@ -1,8 +1,8 @@
 import React from 'react';
 import Link from 'next/link';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'next/router';
-import LoadingSpinner from '../components/LoadingSpinner';
+import LoadingSpinner from '../../components/LoadingSpinner';
 
 export default function Settings() {
   const { user, signOut, loading } = useAuth();
@@ -12,8 +12,9 @@ export default function Settings() {
   const handleSignOut = async () => {
     setLoggingOut(true);
     try {
+      await fetch('/api/logout', { method: 'POST' });
       await signOut();
-      router.push('/login');
+      router.replace('/login');
     } catch (error) {
       console.error('Error signing out:', error);
       setLoggingOut(false);

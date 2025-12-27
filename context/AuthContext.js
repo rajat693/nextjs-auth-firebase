@@ -37,10 +37,8 @@ export const AuthProvider = ({ children }) => {
           setUser(null);
         }
       } else {
-        // User is signed out, clear session
-        await fetch('/api/auth/session', {
-          method: 'DELETE',
-        });
+        // User signed out - just update state
+        // Cookie is already cleared by /api/logout
         setUser(null);
       }
       setLoading(false);
@@ -62,15 +60,9 @@ export const AuthProvider = ({ children }) => {
 
   const signOut = async () => {
     try {
-      // First clear the session cookie on backend
-      await fetch('/api/auth/session', {
-        method: 'DELETE',
-      });
-      
-      // Then sign out from Firebase
+      // Just sign out from Firebase
+      // Cookie clearing happens in individual page components via /api/logout
       await firebaseSignOut(auth);
-      
-      // Session cleared, user will be set to null by onAuthStateChanged
     } catch (error) {
       console.error('Error signing out:', error);
       throw error;

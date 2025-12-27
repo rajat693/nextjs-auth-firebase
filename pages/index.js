@@ -1,8 +1,8 @@
 import React from 'react';
+import Link from 'next/link';
 import { useAuth } from '../context/AuthContext';
 import { useRouter } from 'next/router';
 import LoadingSpinner from '../components/LoadingSpinner';
-import Link from 'next/link';
 
 export default function Home() {
   const { user, signOut, loading } = useAuth();
@@ -12,15 +12,20 @@ export default function Home() {
   const handleSignOut = async () => {
     setLoggingOut(true);
     try {
+      // 1. Call backend to clear session + revoke tokens
+      await fetch('/api/logout', { method: 'POST' });
+      
+      // 2. Sign out from Firebase (clears client auth)
       await signOut();
-      router.push('/login');
+      
+      // 3. Redirect to login
+      router.replace('/login');
     } catch (error) {
       console.error('Error signing out:', error);
       setLoggingOut(false);
     }
   };
 
-  // Show full-page loader during initial load or logout
   if (loading) {
     return <LoadingSpinner />;
   }
@@ -96,13 +101,13 @@ export default function Home() {
             <div className="space-y-2">
               <Link
                 href="/profile"
-                className="block px-4 py-2 bg-gray-700 hover:bg-gray-500 rounded-lg transition"
+                className="block px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
               >
                 View Profile →
               </Link>
               <Link
                 href="/settings"
-                className="block px-4 py-2 bg-gray-700 hover:bg-gray-500 rounded-lg transition"
+                className="block px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
               >
                 Settings →
               </Link>
