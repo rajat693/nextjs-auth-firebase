@@ -1,32 +1,13 @@
 import React from 'react';
 import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
-import { useRouter } from 'next/router';
-import LoadingSpinner from '../../components/LoadingSpinner';
+import { SpinnerIcon } from '../../components/Icons';
 
 export default function Settings() {
-  const { user, signOut, loading } = useAuth();
-  const router = useRouter();
-  const [loggingOut, setLoggingOut] = React.useState(false);
+  const { handleSignOut, signingOut, error } = useAuth();
 
-  const handleSignOut = async () => {
-    setLoggingOut(true);
-    try {
-      await fetch('/api/logout', { method: 'POST' });
-      await signOut();
-      router.replace('/login');
-    } catch (error) {
-      console.error('Error signing out:', error);
-      setLoggingOut(false);
-    }
-  };
-
-  if (loading) {
-    return <LoadingSpinner />;
-  }
-
-  if (loggingOut) {
-    return <LoadingSpinner message="Logging out..." />;
+  if (error) {
+    return <div className="text-red-500">{error}</div>;
   }
 
   return (
@@ -42,9 +23,9 @@ export default function Settings() {
             </div>
             <button
               onClick={handleSignOut}
-              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition"
+              className="flex items-center justify-center gap-3 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition"
             >
-              Logout
+              {signingOut ? <><SpinnerIcon className="h-5 w-5" /> Logging out...</> : "Logout"}
             </button>
           </div>
         </div>

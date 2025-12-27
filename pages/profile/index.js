@@ -1,69 +1,48 @@
-import React from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
-import { useAuth } from '../../context/AuthContext';
-import { useRouter } from 'next/router';
-import LoadingSpinner from '../../components/LoadingSpinner';
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { useAuth } from "../../context/AuthContext";
+import { SpinnerIcon } from "../../components/Icons";
 
 export default function Profile() {
-  const { user, signOut, loading } = useAuth();
-  const router = useRouter();
-  const [loggingOut, setLoggingOut] = React.useState(false);
-  const [userInput, setUserInput] = React.useState('');
-  const [saving, setSaving] = React.useState(false);
-  const [loadingData, setLoadingData] = React.useState(true);
-  const [saveSuccess, setSaveSuccess] = React.useState(false);
-  const [saveError, setSaveError] = React.useState(null);
+  const { user, handleSignOut, signingOut, error } = useAuth();
+  const [userInput, setUserInput] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [loadingData, setLoadingData] = useState(true);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState(null);
 
   // Load user data from backend API
-  React.useEffect(() => {
+  useEffect(() => {
     const loadUserData = async () => {
-      if (user) {
-        try {
-          const response = await fetch('/api/user-details');
-          
-          // Handle 401 - session invalid
-          if (response.status === 401) {
-            router.push('/login');
-            return;
-          }
-          
-          const result = await response.json();
+      if (signingOut || !user) return;
+      try {
+        const response = await fetch("/api/user-details");
 
-          if (result.success && result.data) {
-            setUserInput(result.data.userInput || '');
-          }
-        } catch (error) {
-          console.error('Error loading user data:', error);
-        } finally {
-          setLoadingData(false);
+        // Handle 401 - session invalid
+        if (response.status === 401) {
+          handleSignOut();
+          return;
         }
+
+        const result = await response.json();
+
+        if (result.success && result.data) {
+          setUserInput(result.data.userInput || "");
+        }
+      } catch (error) {
+        console.error("Error loading user data:", error);
+      } finally {
+        setLoadingData(false);
       }
     };
 
     loadUserData();
-  }, [user, router]);
-
-  const handleSignOut = async () => {
-    setLoggingOut(true);
-    try {
-      // 1. Backend logout
-      await fetch('/api/logout', { method: 'POST' });
-      
-      // 2. Firebase signout
-      await signOut();
-      
-      // 3. Redirect
-      router.replace('/login');
-    } catch (error) {
-      console.error('Error signing out:', error);
-      setLoggingOut(false);
-    }
-  };
+  }, [user, handleSignOut, signingOut]);
 
   const handleSave = async () => {
     if (!userInput.trim()) {
-      setSaveError('Please enter some text');
+      setSaveError("Please enter some text");
       return;
     }
 
@@ -72,17 +51,17 @@ export default function Profile() {
     setSaveSuccess(false);
 
     try {
-      const response = await fetch('/api/user-details', {
-        method: 'POST',
+      const response = await fetch("/api/user-details", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ userInput }),
       });
 
       // Handle 401 - session invalid
       if (response.status === 401) {
-        router.push('/login');
+        handleSignOut();
         return;
       }
 
@@ -92,29 +71,25 @@ export default function Profile() {
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 3000);
       } else {
-        setSaveError(result.error || 'Failed to save data');
+        setSaveError(result.error || "Failed to save data");
       }
     } catch (error) {
-      console.error('Error saving data:', error);
-      setSaveError('Failed to save data. Please try again.');
+      console.error("Error saving data:", error);
+      setSaveError("Failed to save data. Please try again.");
     } finally {
       setSaving(false);
     }
   };
 
   const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSave();
     }
   };
 
-  if (loading) {
-    return <LoadingSpinner />;
-  }
-
-  if (loggingOut) {
-    return <LoadingSpinner message="Logging out..." />;
+  if (error) {
+    return <div className="text-red-500">{error}</div>;
   }
 
   return (
@@ -131,9 +106,15 @@ export default function Profile() {
             </div>
             <button
               onClick={handleSignOut}
-              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition"
+              className="flex items-center justify-center gap-3 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition"
             >
-              Logout
+              {signingOut ? (
+                <>
+                  <SpinnerIcon className="h-5 w-5" /> Logging out...
+                </>
+              ) : (
+                "Logout"
+              )}
             </button>
           </div>
         </div>
@@ -176,27 +157,33 @@ export default function Profile() {
                 </dd>
               </div>
               <div>
-                <dt className="text-sm font-medium text-gray-500">Email Verified</dt>
+                <dt className="text-sm font-medium text-gray-500">
+                  Email Verified
+                </dt>
                 <dd className="mt-1">
                   <span
                     className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                       user?.emailVerified
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-yellow-100 text-yellow-800'
+                        ? "bg-green-100 text-green-800"
+                        : "bg-yellow-100 text-yellow-800"
                     }`}
                   >
-                    {user?.emailVerified ? 'Verified' : 'Not Verified'}
+                    {user?.emailVerified ? "Verified" : "Not Verified"}
                   </span>
                 </dd>
               </div>
               <div>
-                <dt className="text-sm font-medium text-gray-500">Account Created</dt>
+                <dt className="text-sm font-medium text-gray-500">
+                  Account Created
+                </dt>
                 <dd className="mt-1 text-sm text-gray-900">
                   {user?.metadata?.creationTime}
                 </dd>
               </div>
               <div>
-                <dt className="text-sm font-medium text-gray-500">Last Sign In</dt>
+                <dt className="text-sm font-medium text-gray-500">
+                  Last Sign In
+                </dt>
                 <dd className="mt-1 text-sm text-gray-900">
                   {user?.metadata?.lastSignInTime}
                 </dd>
@@ -208,7 +195,7 @@ export default function Profile() {
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 Your Notes
               </h3>
-              
+
               {loadingData ? (
                 <div className="flex justify-center py-4">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
@@ -216,7 +203,10 @@ export default function Profile() {
               ) : (
                 <div className="space-y-4">
                   <div>
-                    <label htmlFor="userInput" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label
+                      htmlFor="userInput"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
                       Enter your notes or details:
                     </label>
                     <textarea
@@ -226,7 +216,7 @@ export default function Profile() {
                       onChange={(e) => setUserInput(e.target.value)}
                       onKeyPress={handleKeyPress}
                       placeholder="Type your notes here... (Press Enter to save)"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none placeholder:text-gray-300 text-gray-700"
                     />
                     <p className="text-xs text-gray-500 mt-1">
                       Press Enter to save or click the Save button
@@ -236,7 +226,9 @@ export default function Profile() {
                   {/* Success/Error Messages */}
                   {saveSuccess && (
                     <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <p className="text-green-800 text-sm font-medium">✓ Saved successfully!</p>
+                      <p className="text-green-800 text-sm font-medium">
+                        ✓ Saved successfully!
+                      </p>
                     </div>
                   )}
 
@@ -258,7 +250,7 @@ export default function Profile() {
                         Saving...
                       </span>
                     ) : (
-                      'Save'
+                      "Save"
                     )}
                   </button>
                 </div>
