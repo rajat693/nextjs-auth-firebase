@@ -1,8 +1,8 @@
 import React from 'react';
-import { useAuth } from '../../context/AuthContext';
-import { useRouter } from 'next/router';
-import LoadingSpinner from '../../components/LoadingSpinner';
 import Link from 'next/link';
+import { useAuth } from '../context/AuthContext';
+import { useRouter } from 'next/router';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 export default function Settings() {
   const { user, signOut, loading } = useAuth();
@@ -13,7 +13,6 @@ export default function Settings() {
     setLoggingOut(true);
     try {
       await signOut();
-      await new Promise(resolve => setTimeout(resolve, 500));
       router.push('/login');
     } catch (error) {
       console.error('Error signing out:', error);

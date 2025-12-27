@@ -6,7 +6,6 @@ import {
   signOut as firebaseSignOut 
 } from 'firebase/auth';
 import { auth } from '../lib/firebase';
-import { useRouter } from 'next/router';
 
 const AuthContext = createContext({});
 
@@ -15,7 +14,6 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -55,7 +53,6 @@ export const AuthProvider = ({ children }) => {
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
-      // Session will be created automatically by onAuthStateChanged listener
       return result;
     } catch (error) {
       console.error('Error signing in with Google:', error);
@@ -65,9 +62,15 @@ export const AuthProvider = ({ children }) => {
 
   const signOut = async () => {
     try {
+      // First clear the session cookie on backend
+      await fetch('/api/auth/session', {
+        method: 'DELETE',
+      });
+      
+      // Then sign out from Firebase
       await firebaseSignOut(auth);
-      // Session will be cleared automatically by onAuthStateChanged listener
-      router.push('/login');
+      
+      // Session cleared, user will be set to null by onAuthStateChanged
     } catch (error) {
       console.error('Error signing out:', error);
       throw error;

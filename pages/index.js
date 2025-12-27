@@ -13,8 +13,6 @@ export default function Home() {
     setLoggingOut(true);
     try {
       await signOut();
-      // Wait a brief moment for session to clear
-      await new Promise(resolve => setTimeout(resolve, 500));
       router.push('/login');
     } catch (error) {
       console.error('Error signing out:', error);

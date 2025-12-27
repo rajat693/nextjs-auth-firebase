@@ -21,33 +21,8 @@ export async function middleware(request) {
     return NextResponse.redirect(loginUrl);
   }
   
-  // For protected routes with session, verify the session cookie
-  if (!isPublicPath && session) {
-    try {
-      // Verify session cookie with Firebase Admin (optional but recommended)
-      // Note: This requires calling an API route since we can't use Firebase Admin directly in middleware
-      const verifyResponse = await fetch(new URL('/api/auth/verify', request.url), {
-        headers: {
-          Cookie: `session=${session.value}`,
-        },
-      });
-      
-      if (!verifyResponse.ok) {
-        // Invalid session, redirect to login
-        const loginUrl = new URL('/login', request.url);
-        loginUrl.searchParams.set('redirect', pathname);
-        return NextResponse.redirect(loginUrl);
-      }
-    } catch (error) {
-      console.error('Error verifying session:', error);
-      // On error, allow request to continue (fail open) or redirect to login (fail closed)
-      // For security, we'll redirect to login
-      const loginUrl = new URL('/login', request.url);
-      loginUrl.searchParams.set('redirect', pathname);
-      return NextResponse.redirect(loginUrl);
-    }
-  }
-  
+  // Allow request to continue
+  // Verification will happen in API routes
   return NextResponse.next();
 }
 
