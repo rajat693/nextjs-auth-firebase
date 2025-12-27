@@ -5,16 +5,21 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 import { GoogleIcon, SpinnerIcon } from '../../components/Icons';
 
 export default function Login() {
-  const { user, handleGoogleSignIn, signingIn, error } = useAuth();
+  const { user, initializing, handleGoogleSignIn, signingIn, error } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     // Redirect to dashboard or redirect URL if already logged in
-    if (user) {
+    if (user && !initializing) {
       const redirect = router.query.redirect || '/';
       router.push(redirect);
     }
-  }, [user, router]);
+  }, [user, initializing, router]);
+
+  // Show loading spinner while checking auth state
+  if (initializing) {
+    return <LoadingSpinner />;
+  }
 
   // Don't show login page if user is already authenticated
   if (user) {

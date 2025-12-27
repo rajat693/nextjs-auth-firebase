@@ -2,9 +2,15 @@ import React from 'react';
 import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
 import { SpinnerIcon } from '../../components/Icons';
+import LoadingSpinner from '../../components/LoadingSpinner';
 
 export default function Settings() {
-  const { handleSignOut, signingOut, error } = useAuth();
+  const { initializing, handleSignOut, signingOut, error } = useAuth();
+
+  // Show loading spinner while checking auth state
+  if (initializing) {
+    return <LoadingSpinner />;
+  }
 
   if (error) {
     return <div className="text-red-500">{error}</div>;
