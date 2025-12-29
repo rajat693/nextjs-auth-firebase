@@ -4,6 +4,7 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
   signOut,
+  OAuthProvider,
 } from "firebase/auth";
 import { auth } from "../lib/firebase";
 import { useRouter } from "next/router";
@@ -56,8 +57,8 @@ export const AuthProvider = ({ children }) => {
 
   const handleGoogleSignIn = async () => {
     setSigningIn(true);
-    const provider = new GoogleAuthProvider();
     try {
+      const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       const idToken = await result.user.getIdToken();
 
@@ -78,6 +79,28 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const handleMicrosoftSignIn = async () => {
+    setSigningIn(true);
+    try {
+      const provider = new OAuthProvider("microsoft.com");
+      const result = await signInWithPopup(auth, provider);
+      // Get Firebase ID token (IMPORTANT)
+      const idToken = await result.user.getIdToken();
+
+      await fetch("/api/auth/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken }),
+      });
+    } catch (error) {
+      console.error("Microsoft sign-in failed", error);
+      setError(error.message);
+    } finally {
+      setSigningIn(false);
+    }
+  };
+
+
   return (
     <AuthContext.Provider value={{ 
       user, 
@@ -85,6 +108,7 @@ export const AuthProvider = ({ children }) => {
       signingIn, 
       signingOut, 
       handleGoogleSignIn, 
+      handleMicrosoftSignIn,
       handleSignOut, 
       error,
       showWarning,

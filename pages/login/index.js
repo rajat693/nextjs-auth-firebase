@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '../../context/AuthContext';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import { GoogleIcon, SpinnerIcon } from '../../components/Icons';
+import { GoogleIcon, MicrosoftIcon, SpinnerIcon } from '../../components/Icons';
 
 export default function Login() {
-  const { user, initializing, handleGoogleSignIn, signingIn, error } = useAuth();
+  const { user, initializing, handleGoogleSignIn, handleMicrosoftSignIn, signingIn, error } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -54,6 +54,24 @@ export default function Login() {
             <>
               <GoogleIcon />
               <span>Sign in with Google</span>
+            </>
+          )}
+        </button>
+
+        <button
+          onClick={handleMicrosoftSignIn}
+          disabled={signingIn}
+          className="mt-3 w-full flex items-center justify-center gap-3 bg-white border border-gray-300 rounded-lg px-6 py-3 text-gray-700 font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition"
+        >
+          {signingIn ? (
+            <>
+              <SpinnerIcon className="h-5 w-5" />
+              <span>Signing in...</span>
+            </>
+          ) : (
+            <>
+              <MicrosoftIcon />
+              <span>Sign in with Microsoft</span>
             </>
           )}
         </button>
