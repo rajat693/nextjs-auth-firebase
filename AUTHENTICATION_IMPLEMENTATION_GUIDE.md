@@ -43,7 +43,7 @@
 ├─────────────────────────────────────────────────────────────┤
 │                                                               │
 │  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐  │
-│  │  Middleware  │    │  /api/auth/  │    │  Firebase   │  │
+│  │  Proxy       │    │  /api/auth/  │    │  Firebase   │  │
 │  │              │    │   session    │    │  Admin SDK  │  │
 │  │  (Route      │    │              │    │              │  │
 │  │  Protection) │    │  /api/auth/  │    │              │  │
@@ -57,7 +57,7 @@
 
 1. **Client-Side Authentication**: Firebase Client SDK handles OAuth popup (Google/Microsoft)
 2. **Server-Side Session Management**: Firebase Admin SDK creates secure HTTP-only session cookies
-3. **Route Protection**: Next.js middleware checks session cookie before allowing access
+3. **Route Protection**: Next.js proxy (middleware) checks session cookie before allowing access
 4. **Inactivity Tracking**: Custom hook monitors user activity and auto-logouts after 30 minutes
 5. **Warning System**: Modal appears at 29 minutes with 60-second countdown
 6. **Multiple OAuth Providers**: Supports Google and Microsoft authentication (easily extensible to more providers using DRY pattern)
@@ -87,14 +87,14 @@ Cookie set in browser
     ↓
 User redirected to dashboard
     ↓
-Middleware validates session cookie on each request
+Proxy (middleware) validates session cookie on each request
 ```
 
 ### 2. Session Management
 
 - **Session Cookie**: HttpOnly, Secure, SameSite=Lax
 - **Expiration**: 14 days (configurable)
-- **Validation**: Middleware checks cookie on every route
+- **Validation**: Proxy (middleware) checks cookie on every route
 - **Revocation**: On logout, all Firebase tokens are revoked
 
 ### 3. Logout Flow
@@ -195,9 +195,9 @@ Create modal component for inactivity warning.
 
 Create session and logout API endpoints.
 
-### Step 8: Middleware
+### Step 8: Proxy (Route Protection)
 
-Set up route protection middleware.
+Set up route protection proxy.
 
 ### Step 9: App Integration
 
@@ -794,14 +794,14 @@ export default async function handler(req, res) {
 }
 ```
 
-### Step 9: Middleware
+### Step 9: Proxy (Route Protection)
 
-**File:** `middleware.js`
+**File:** `proxy.js`
 
 ```javascript
 import { NextResponse } from 'next/server';
 
-export async function middleware(request) {
+export async function proxy(request) {
   const { pathname } = request.nextUrl;
   
   // Get session cookie
@@ -1095,11 +1095,11 @@ export default function Home() {
 
 ### Route Protection
 
-- [ ] **Middleware**
+- [ ] **Proxy (Route Protection)**
   - [ ] Protected routes redirect to login without session
   - [ ] Login page redirects to dashboard with session
   - [ ] Redirect parameter is preserved
-  - [ ] API routes are excluded from middleware
+  - [ ] API routes are excluded from proxy
 
 - [ ] **Protected Pages**
   - [ ] Show loading spinner while initializing
@@ -1177,7 +1177,7 @@ FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYour private key here\n-----E
 7. ✅ Create `components/InactivityWarningModal.js`
 8. ✅ Create `pages/api/auth/session.js`
 9. ✅ Create `pages/api/auth/logout.js`
-10. ✅ Create `middleware.js`
+10. ✅ Create `proxy.js`
 11. ✅ Update `pages/_app.js`
 12. ✅ Create `pages/login/index.js` (with both sign-in options)
 13. ✅ Update protected pages (add `initializing` check)
