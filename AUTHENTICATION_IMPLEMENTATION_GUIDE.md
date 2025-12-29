@@ -55,11 +55,12 @@
 
 ### Key Concepts
 
-1. **Client-Side Authentication**: Firebase Client SDK handles Google OAuth popup
+1. **Client-Side Authentication**: Firebase Client SDK handles OAuth popup (Google/Microsoft)
 2. **Server-Side Session Management**: Firebase Admin SDK creates secure HTTP-only session cookies
 3. **Route Protection**: Next.js middleware checks session cookie before allowing access
 4. **Inactivity Tracking**: Custom hook monitors user activity and auto-logouts after 30 minutes
 5. **Warning System**: Modal appears at 29 minutes with 60-second countdown
+6. **Multiple OAuth Providers**: Supports Google and Microsoft authentication (easily extensible to more providers using DRY pattern)
 
 ---
 
@@ -68,11 +69,11 @@
 ### 1. User Login Flow
 
 ```
-User clicks "Sign in with Google"
+User clicks "Sign in with Google" or "Sign in with Microsoft"
     ↓
-Firebase Client SDK opens Google OAuth popup
+Firebase Client SDK opens OAuth popup (Google/Microsoft)
     ↓
-User authenticates with Google
+User authenticates with provider (Google/Microsoft)
     ↓
 Firebase returns user object + ID token
     ↓
@@ -174,31 +175,39 @@ npm install firebase firebase-admin
 
 Create client and admin SDK configurations.
 
-### Step 3: Authentication Context
-
-Create React context for global auth state management.
-
-### Step 4: Inactivity Timer Hook
+### Step 3: Inactivity Timer Hook
 
 Create custom hook for tracking user inactivity.
 
-### Step 5: Warning Modal Component
+### Step 4: Authentication Context
+
+Create React context for global auth state management (supports Google & Microsoft).
+
+### Step 5: Icons Component
+
+Create icon components for Google, Microsoft, and loading spinner.
+
+### Step 6: Warning Modal Component
 
 Create modal component for inactivity warning.
 
-### Step 6: API Routes
+### Step 7: API Routes
 
 Create session and logout API endpoints.
 
-### Step 7: Middleware
+### Step 8: Middleware
 
 Set up route protection middleware.
 
-### Step 8: App Integration
+### Step 9: App Integration
 
 Integrate everything in `_app.js`.
 
-### Step 9: Protected Pages
+### Step 10: Login Page
+
+Create login page with both Google and Microsoft sign-in options.
+
+### Step 11: Protected Pages
 
 Update pages to handle auth state.
 
@@ -444,6 +453,7 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
   signOut,
+  OAuthProvider,
 } from "firebase/auth";
 import { auth } from "../lib/firebase";
 import { useRouter } from "next/router";
@@ -457,7 +467,8 @@ export const AuthProvider = ({ children }) => {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [initializing, setInitializing] = useState(true);
-  const [signingIn, setSigningIn] = useState(false);
+  const [signingInGoogle, setSigningInGoogle] = useState(false);
+  const [signingInMicrosoft, setSigningInMicrosoft] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [error, setError] = useState(null);
   
@@ -494,9 +505,10 @@ export const AuthProvider = ({ children }) => {
   // Use inactivity timer hook to auto-logout after 30 minutes of inactivity
   const { showWarning, countdown, resetWarning } = useInactivityTimer(user, handleSignOut);
 
-  const handleGoogleSignIn = async () => {
-    setSigningIn(true);
-    const provider = new GoogleAuthProvider();
+  // Generic sign-in handler to avoid code duplication (DRY principle)
+  const handleSignIn = useCallback(async (provider, setSigningInState, providerName) => {
+    setSigningInState(true);
+    setError(null);
     try {
       const result = await signInWithPopup(auth, provider);
       const idToken = await result.user.getIdToken();
@@ -510,21 +522,32 @@ export const AuthProvider = ({ children }) => {
         body: JSON.stringify({ idToken }),
       });
     } catch (error) {
-      console.error("Error signing in with Google:", error);
+      console.error(`Error signing in with ${providerName}:`, error);
       setError(error.message);
+    } finally {
+      setSigningInState(false);
     }
-    finally {
-      setSigningIn(false);
-    }
-  };
+  }, []);
+
+  const handleGoogleSignIn = useCallback(() => {
+    const provider = new GoogleAuthProvider();
+    return handleSignIn(provider, setSigningInGoogle, "Google");
+  }, [handleSignIn]);
+
+  const handleMicrosoftSignIn = useCallback(() => {
+    const provider = new OAuthProvider("microsoft.com");
+    return handleSignIn(provider, setSigningInMicrosoft, "Microsoft");
+  }, [handleSignIn]);
 
   return (
     <AuthContext.Provider value={{ 
       user, 
       initializing, 
-      signingIn, 
+      signingInGoogle,
+      signingInMicrosoft,
       signingOut, 
       handleGoogleSignIn, 
+      handleMicrosoftSignIn,
       handleSignOut, 
       error,
       showWarning,
@@ -537,7 +560,61 @@ export const AuthProvider = ({ children }) => {
 };
 ```
 
-### Step 5: Inactivity Warning Modal
+### Step 5: Icons Component
+
+**File:** `components/Icons.js`
+
+```javascript
+import React from 'react';
+
+/**
+ * Google Icon Component
+ * Used for Google Sign-In button
+ */
+export const GoogleIcon = ({ className = "w-5 h-5", ...props }) => (
+  <svg className={className} viewBox="0 0 24 24" {...props}>
+    <path
+      fill="#4285F4"
+      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+    />
+    <path
+      fill="#34A853"
+      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+    />
+    <path
+      fill="#FBBC05"
+      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+    />
+    <path
+      fill="#EA4335"
+      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+    />
+  </svg>
+);
+
+/**
+ * Microsoft Icon Component
+ * Used for Microsoft Sign-In button
+ */
+export const MicrosoftIcon = ({ className = "w-5 h-5", ...props }) => (
+  <svg className={className} viewBox="0 0 23 23" {...props}>
+    <path fill="#f25022" d="M0 0h11v11H0z" />
+    <path fill="#00a4ef" d="M12 0h11v11H12z" />
+    <path fill="#7fba00" d="M0 12h11v11H0z" />
+    <path fill="#ffb900" d="M12 12h11v11H12z" />
+  </svg>
+);
+
+/**
+ * Spinner Icon Component
+ * Used for loading states
+ */
+export const SpinnerIcon = ({ className = "w-5 h-5", ...props }) => (
+  <div className={`animate-spin rounded-full border-b-2 border-gray-700 ${className}`} {...props}></div>
+);
+```
+
+### Step 6: Inactivity Warning Modal
 
 **File:** `components/InactivityWarningModal.js`
 
@@ -635,7 +712,7 @@ export default function InactivityWarningModal({ countdown, onDismiss }) {
 }
 ```
 
-### Step 6: Session API Route
+### Step 7: Session API Route
 
 **File:** `pages/api/auth/session.js`
 
@@ -682,7 +759,7 @@ export default async function handler(req, res) {
 }
 ```
 
-### Step 7: Logout API Route
+### Step 8: Logout API Route
 
 **File:** `pages/api/auth/logout.js`
 
@@ -717,7 +794,7 @@ export default async function handler(req, res) {
 }
 ```
 
-### Step 8: Middleware
+### Step 9: Middleware
 
 **File:** `middleware.js`
 
@@ -764,7 +841,7 @@ export const config = {
 };
 ```
 
-### Step 9: App Integration
+### Step 10: App Integration
 
 **File:** `pages/_app.js`
 
@@ -798,7 +875,7 @@ export default function App({ Component, pageProps }) {
 }
 ```
 
-### Step 10: Login Page
+### Step 11: Login Page
 
 **File:** `pages/login/index.js`
 
@@ -807,10 +884,10 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '../../context/AuthContext';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import { GoogleIcon, SpinnerIcon } from '../../components/Icons';
+import { GoogleIcon, MicrosoftIcon, SpinnerIcon } from '../../components/Icons';
 
 export default function Login() {
-  const { user, initializing, handleGoogleSignIn, signingIn, error } = useAuth();
+  const { user, initializing, handleGoogleSignIn, handleMicrosoftSignIn, signingInGoogle, signingInMicrosoft, error } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -847,10 +924,10 @@ export default function Login() {
 
         <button
           onClick={handleGoogleSignIn}
-          disabled={signingIn}
+          disabled={signingInGoogle || signingInMicrosoft}
           className="w-full flex items-center justify-center gap-3 bg-white border border-gray-300 rounded-lg px-6 py-3 text-gray-700 font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition"
         >
-          {signingIn ? (
+          {signingInGoogle ? (
             <>
               <SpinnerIcon className="h-5 w-5" />
               <span>Signing in...</span>
@@ -859,6 +936,24 @@ export default function Login() {
             <>
               <GoogleIcon />
               <span>Sign in with Google</span>
+            </>
+          )}
+        </button>
+
+        <button
+          onClick={handleMicrosoftSignIn}
+          disabled={signingInGoogle || signingInMicrosoft}
+          className="mt-3 w-full flex items-center justify-center gap-3 bg-white border border-gray-300 rounded-lg px-6 py-3 text-gray-700 font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition"
+        >
+          {signingInMicrosoft ? (
+            <>
+              <SpinnerIcon className="h-5 w-5" />
+              <span>Signing in...</span>
+            </>
+          ) : (
+            <>
+              <MicrosoftIcon />
+              <span>Sign in with Microsoft</span>
             </>
           )}
         </button>
@@ -872,7 +967,7 @@ export default function Login() {
 }
 ```
 
-### Step 11: Protected Page Example
+### Step 12: Protected Page Example
 
 **File:** `pages/index.js` (Dashboard)
 
@@ -943,11 +1038,15 @@ export default function Home() {
 
 - [ ] **Login**
   - [ ] Google OAuth popup opens
+  - [ ] Microsoft OAuth popup opens
   - [ ] User can authenticate with Google
+  - [ ] User can authenticate with Microsoft
   - [ ] ID token is sent to server
   - [ ] Session cookie is created
   - [ ] User is redirected to dashboard
   - [ ] User state is available in context
+  - [ ] Separate loading states for each provider
+  - [ ] Buttons are disabled during any sign-in process
 
 - [ ] **Session Persistence**
   - [ ] Session persists on page refresh
@@ -1073,14 +1172,15 @@ FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYour private key here\n-----E
 2. ✅ Create `lib/firebase.js` (Client SDK)
 3. ✅ Create `lib/firebaseAdmin.js` (Admin SDK)
 4. ✅ Create `hooks/useInactivityTimer.js`
-5. ✅ Create `context/AuthContext.js`
-6. ✅ Create `components/InactivityWarningModal.js`
-7. ✅ Create `pages/api/auth/session.js`
-8. ✅ Create `pages/api/auth/logout.js`
-9. ✅ Create `middleware.js`
-10. ✅ Update `pages/_app.js`
-11. ✅ Create `pages/login/index.js`
-12. ✅ Update protected pages (add `initializing` check)
+5. ✅ Create `context/AuthContext.js` (with Google & Microsoft sign-in)
+6. ✅ Create `components/Icons.js` (Google, Microsoft, Spinner icons)
+7. ✅ Create `components/InactivityWarningModal.js`
+8. ✅ Create `pages/api/auth/session.js`
+9. ✅ Create `pages/api/auth/logout.js`
+10. ✅ Create `middleware.js`
+11. ✅ Update `pages/_app.js`
+12. ✅ Create `pages/login/index.js` (with both sign-in options)
+13. ✅ Update protected pages (add `initializing` check)
 
 ---
 
@@ -1091,6 +1191,9 @@ FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYour private key here\n-----E
 - **Timer Cleanup**: Always clear timers and remove event listeners in cleanup
 - **State Management**: Use refs for values that don't need to trigger re-renders
 - **Error Handling**: Always handle errors gracefully with user-friendly messages
+- **DRY Principle**: Use generic sign-in handler for multiple OAuth providers to avoid code duplication
+- **Separate Loading States**: Use separate loading states for each OAuth provider (`signingInGoogle`, `signingInMicrosoft`) for better UX
+- **Adding More Providers**: To add more OAuth providers (e.g., GitHub, Facebook), create a provider instance and call `handleSignIn` (see AuthContext.js for pattern)
 - **Testing**: Test in multiple browsers and devices
 - **Production**: Change inactivity timers back to production values (29 min / 60 sec / 30 min)
 

@@ -18,7 +18,8 @@ export const AuthProvider = ({ children }) => {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [initializing, setInitializing] = useState(true);
-  const [signingIn, setSigningIn] = useState(false);
+  const [signingInGoogle, setSigningInGoogle] = useState(false);
+  const [signingInMicrosoft, setSigningInMicrosoft] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [error, setError] = useState(null);
   
@@ -55,10 +56,11 @@ export const AuthProvider = ({ children }) => {
   // Use inactivity timer hook to auto-logout after 30 minutes of inactivity
   const { showWarning, countdown, resetWarning } = useInactivityTimer(user, handleSignOut);
 
-  const handleGoogleSignIn = async () => {
-    setSigningIn(true);
+  // Generic sign-in handler to avoid code duplication (DRY principle)
+  const handleSignIn = useCallback(async (provider, setSigningInState, providerName) => {
+    setSigningInState(true);
+    setError(null);
     try {
-      const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       const idToken = await result.user.getIdToken();
 
@@ -71,41 +73,29 @@ export const AuthProvider = ({ children }) => {
         body: JSON.stringify({ idToken }),
       });
     } catch (error) {
-      console.error("Error signing in with Google:", error);
-      setError(error.message);
-    }
-    finally {
-      setSigningIn(false);
-    }
-  };
-
-  const handleMicrosoftSignIn = async () => {
-    setSigningIn(true);
-    try {
-      const provider = new OAuthProvider("microsoft.com");
-      const result = await signInWithPopup(auth, provider);
-      // Get Firebase ID token (IMPORTANT)
-      const idToken = await result.user.getIdToken();
-
-      await fetch("/api/auth/session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken }),
-      });
-    } catch (error) {
-      console.error("Microsoft sign-in failed", error);
+      console.error(`Error signing in with ${providerName}:`, error);
       setError(error.message);
     } finally {
-      setSigningIn(false);
+      setSigningInState(false);
     }
-  };
+  }, []);
 
+  const handleGoogleSignIn = useCallback(() => {
+    const provider = new GoogleAuthProvider();
+    return handleSignIn(provider, setSigningInGoogle, "Google");
+  }, [handleSignIn]);
+
+  const handleMicrosoftSignIn = useCallback(() => {
+    const provider = new OAuthProvider("microsoft.com");
+    return handleSignIn(provider, setSigningInMicrosoft, "Microsoft");
+  }, [handleSignIn]);
 
   return (
     <AuthContext.Provider value={{ 
       user, 
       initializing, 
-      signingIn, 
+      signingInGoogle,
+      signingInMicrosoft,
       signingOut, 
       handleGoogleSignIn, 
       handleMicrosoftSignIn,

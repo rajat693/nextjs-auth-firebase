@@ -5,7 +5,7 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 import { GoogleIcon, MicrosoftIcon, SpinnerIcon } from '../../components/Icons';
 
 export default function Login() {
-  const { user, initializing, handleGoogleSignIn, handleMicrosoftSignIn, signingIn, error } = useAuth();
+  const { user, initializing, handleGoogleSignIn, handleMicrosoftSignIn, signingInGoogle, signingInMicrosoft, error } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -42,10 +42,10 @@ export default function Login() {
 
         <button
           onClick={handleGoogleSignIn}
-          disabled={signingIn}
+          disabled={signingInGoogle || signingInMicrosoft}
           className="w-full flex items-center justify-center gap-3 bg-white border border-gray-300 rounded-lg px-6 py-3 text-gray-700 font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition"
         >
-          {signingIn ? (
+          {signingInGoogle ? (
             <>
               <SpinnerIcon className="h-5 w-5" />
               <span>Signing in...</span>
@@ -60,10 +60,10 @@ export default function Login() {
 
         <button
           onClick={handleMicrosoftSignIn}
-          disabled={signingIn}
+          disabled={signingInGoogle || signingInMicrosoft}
           className="mt-3 w-full flex items-center justify-center gap-3 bg-white border border-gray-300 rounded-lg px-6 py-3 text-gray-700 font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition"
         >
-          {signingIn ? (
+          {signingInMicrosoft ? (
             <>
               <SpinnerIcon className="h-5 w-5" />
               <span>Signing in...</span>
